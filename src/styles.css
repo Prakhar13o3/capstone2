@@ -1,4 +1,4 @@
-/* Global Styles */
+
 body {
     font-family: Arial, sans-serif;
     margin: 0;
@@ -70,3 +70,81 @@ body {
     font-size: 0.875rem;
   }
   
+  /* Categories Section Styles */
+.categories-container {
+    text-align: center;
+    margin-top: 30px;
+  }
+  
+  .categories-title {
+    font-size: 1.8rem;
+    margin-bottom: 20px;
+    color: #2c3e50;
+  }
+  
+  .category-buttons {
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  
+  .category-btn {
+    background-color: #3498db; /* Blue color for category buttons */
+    color: white;
+    padding: 10px 25px;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+    width: 180px;
+    text-align: center;
+  }
+  
+  .category-btn:hover {
+    background-color: #2980b9; /* Darker blue on hover */
+  }
+
+  .quiz-container, .results-container {
+    padding: 20px;
+    text-align: center;
+    max-width: 600px;
+    margin: auto;
+  }
+  
+  .answers {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 15px;
+  }
+  
+  .timer {
+    margin-top: 10px;
+    font-weight: bold;
+  }
+  
+  .home, .main-options, .categories {
+    text-align: center;
+    margin-top: 30px;
+  }
+  
+
+  button {
+    background-color: #4f46e5; /* Indigo */
+    color: #fff;
+    border: none;
+    padding: 12px 20px;
+    margin: 8px;
+    border-radius: 8px;
+    font-size: 16px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
+  }
+  
+  button:hover {
+    background-color: #4338ca; /* Darker indigo */
+    transform: translateY(-2px);
+  }
