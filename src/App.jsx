@@ -1,12 +1,12 @@
 import { useState } from 'react'
-import './App.css'
-import Navbar from './components/Navbar'
-function App() {
+import Quiz from "./Quiz"
+import {jsQuizz} from "./constants"
 
+function App() {
 
   return (
     <>
-      <Navbar/>
+    <Quiz questions={jsQuizz.questions}/>
     </>
   )
 }
