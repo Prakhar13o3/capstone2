@@ -7,7 +7,7 @@ const Quiz = ({ category }) => {
   const [score, setScore] = useState(0);
   const [answeredQuestions, setAnsweredQuestions] = useState(0);
   const [isQuizOver, setIsQuizOver] = useState(false);
-  const [timer, setTimer] = useState(30);
+  const [timer, setTimer] = useState(30); // 30 seconds per question
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,32 +15,27 @@ const Quiz = ({ category }) => {
   const categoryMapping = {
     English: 'arts_and_literature',
     'General Knowledge': 'general_knowledge',
-    GK: 'general_knowledge',
     Science: 'science',
     Geography: 'geography',
+    History:"history"
   };
 
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const apiCategory = categoryMapping[category] || 'general_knowledge';
+        const apiCategory = categoryMapping[category]
+        console.log(apiCategory,category)
         const response = await fetch(
           `https://the-trivia-api.com/api/questions?categories=${apiCategory}&limit=10&difficulty=medium`
         );
 
-        if (!response.ok) {
-          throw new Error(`API Error: ${response.status}`);
-        }
-
         const data = await response.json();
-
-        if (!data || data.length === 0) {
-          throw new Error('No questions found for this category.');
-        }
-
+        console.log(data)
+        
         setQuestions(data);
         setLoading(false);
-      } catch (err) {
+      } 
+      catch (err) {
         setError(err.message);
         setLoading(false);
       }
@@ -51,7 +46,7 @@ const Quiz = ({ category }) => {
 
   useEffect(() => {
     if (!loading && !isQuizOver && timer === 0) {
-      handleAnswer(); // auto-skip on timeout
+      handleAnswer(); // auto skips on timeout
     }
 
     const timerInterval = setInterval(() => {
@@ -80,19 +75,13 @@ const Quiz = ({ category }) => {
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex((prev) => prev + 1);
-      setTimer(10);
+      setTimer(30); // Reset timer to 30 seconds for next question
     } else {
       setIsQuizOver(true);
     }
   };
 
   if (loading) return <p>Loading questions...</p>;
-  if (error) return (
-    <div>
-      <p style={{ color: 'red' }}>{error}</p>
-      <button onClick={() => window.location.reload()}>Retry</button>
-    </div>
-  );
 
   const currentQuestion = questions[currentQuestionIndex];
 

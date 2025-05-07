@@ -1,10 +1,9 @@
-/* Global Styles */
 body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     margin: 0;
     padding: 0;
-    background-color: #1e1e2f;
-    color: #e5e5e5;
+    background-color: #121212;
+    color: #f5f5f5;
   }
   
   .app-container {
@@ -15,30 +14,29 @@ body {
   
   .main-content {
     flex-grow: 1;
-    padding: 30px 20px;
     text-align: center;
+    padding: 30px 20px;
   }
   
-  /* Header */
   .header {
-    background-color: #151522;
+    background-color: #1f1f1f;
     padding: 15px 0;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
   }
   
   .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    max-width: 1100px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 20px;
   }
   
   .logo {
-    color: #f9fafb;
+    color: #f5f5f5;
     font-size: 1.8rem;
-    font-weight: 600;
+    font-weight: bold;
   }
   
   .nav {
@@ -47,38 +45,51 @@ body {
   }
   
   .nav-link {
-    color: #c7d2fe;
+    color: #cccccc;
     text-decoration: none;
     font-size: 1rem;
-    transition: color 0.3s ease;
+    transition: color 0.3s;
   }
   
   .nav-link:hover {
-    color: #818cf8;
+    color: #4dabf7;
   }
   
-  /* Footer */
   .footer {
-    background-color: #151522;
-    padding: 20px;
+    background-color: #1f1f1f;
+    padding: 15px;
     text-align: center;
-    color: #9ca3af;
+    color: #cccccc;
+    font-size: 0.9rem;
     margin-top: auto;
   }
   
-  .footer-text {
-    font-size: 0.9rem;
-  }
-  
-  /* Section Titles */
   .title,
   .categories-title {
-    font-size: 2.2rem;
-    color: #f3f4f6;
-    margin-bottom: 25px;
+    font-size: 2rem;
+    margin: 20px 0;
+    color: #ffffff;
+  }
+
+  button,.category-btn {
+    background-color: #4dabf7;
+    color: #121212;
+    border: none;
+    padding: 12px 24px;
+    margin: 10px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background-color 0.3s ease, transform 0.2s ease;
   }
   
-  /* Categories Section */
+  button:hover,
+  .category-btn:hover {
+    background-color: #1e90ff;
+    transform: translateY(-2px);
+  }
+  
   .categories-container {
     margin-top: 30px;
   }
@@ -86,93 +97,39 @@ body {
   .category-buttons {
     display: flex;
     justify-content: center;
-    gap: 20px;
+    gap: 15px;
     flex-wrap: wrap;
   }
   
-  .category-btn {
-    background-color: #3b82f6;
-    color: white;
-    padding: 12px 28px;
-    font-size: 1.1rem;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: background-color 0.3s ease;
-    width: 200px;
-  }
-  
-  .category-btn:hover {
-    background-color: #2563eb;
-  }
-  
-  /* Quiz and Results Containers */
-  .quiz-container,
-  .results-container {
-    padding: 30px 20px;
+  .quiz-container, .results-container {
+    padding: 20px;
     text-align: center;
     max-width: 700px;
     margin: auto;
-    background-color: #2a2a40;
-    border-radius: 12px;
-    box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+    background-color: #1e1e1e;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.6);
   }
   
-  /* Answer Buttons */
   .answers {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 10px;
     margin-top: 20px;
   }
   
-  .answers button {
-    background-color: #4b5563;
-    color: #fff;
-    padding: 12px 20px;
-    border: none;
-    border-radius: 6px;
-    font-size: 1rem;
-    transition: background-color 0.3s ease, transform 0.2s ease;
-  }
-  
-  .answers button:hover {
-    background-color: #374151;
-    transform: scale(1.02);
-  }
-  
-  /* Timer */
   .timer {
-    margin-top: 15px;
+    margin-top: 10px;
+    font-weight: bold;
     font-size: 1.1rem;
-    font-weight: 600;
-    color: #facc15;
+    color: #ffd700;
   }
   
-  /* General Buttons */
-  button {
-    background-color: #6366f1;
-    color: #ffffff;
-    border: none;
-    padding: 12px 24px;
-    margin: 10px;
-    border-radius: 8px;
-    font-size: 1rem;
-    font-weight: 500;
-    cursor: pointer;
-    transition: background-color 0.3s ease, transform 0.2s ease;
+  .correct {
+    background-color: #27ae60 !important; /* green */
   }
   
-  button:hover {
-    background-color: #4f46e5;
-    transform: translateY(-2px);
-  }
-  
-  /* Home & Main Sections */
-  .home,
-  .main-options,
-  .categories {
-    text-align: center;
-    margin-top: 30px;
+  .incorrect {
+    background-color: #c0392b !important; /* red */
   }
   

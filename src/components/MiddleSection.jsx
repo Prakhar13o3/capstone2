@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import Categories from './Categories'; // Import the Categories component
+import Categories from '../pages/Categories'; // Import the Categories component
 
 const MiddleSection = () => {
   const [showCategories, setShowCategories] = useState(false);
