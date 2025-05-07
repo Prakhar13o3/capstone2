@@ -7,7 +7,7 @@ const Quiz = ({ category }) => {
   const [score, setScore] = useState(0);
   const [answeredQuestions, setAnsweredQuestions] = useState(0);
   const [isQuizOver, setIsQuizOver] = useState(false);
-  const [timer, setTimer] = useState(10);
+  const [timer, setTimer] = useState(30);
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
