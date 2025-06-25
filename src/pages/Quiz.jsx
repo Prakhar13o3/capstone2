@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
 import Results from './Results';
 
-const Quiz = ({ category }) => {
+const Quiz = () => {
+  const { categoryId } = useParams();
+  console.log("hey bitch "+categoryId)   
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -11,7 +14,7 @@ const Quiz = ({ category }) => {
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
+  
   const categoryMapping = {
     English: 'arts_and_literature',
     'General Knowledge': 'general_knowledge',
@@ -23,8 +26,8 @@ const Quiz = ({ category }) => {
   useEffect(() => {
     const fetchQuestions = async () => {
       try {
-        const apiCategory = categoryMapping[category]
-        console.log(apiCategory,category)
+        const apiCategory = categoryMapping[categoryId]
+        console.log(apiCategory,categoryId)
         const response = await fetch(
           `https://the-trivia-api.com/api/questions?categories=${apiCategory}&limit=10&difficulty=medium`
         );
@@ -42,7 +45,7 @@ const Quiz = ({ category }) => {
     };
 
     fetchQuestions();
-  }, [category]);
+  }, []);
 
   useEffect(() => {
     if (!loading && !isQuizOver && timer === 0) {
@@ -59,10 +62,11 @@ const Quiz = ({ category }) => {
   }, [timer, loading, isQuizOver]);
 
   useEffect(() => {
-    if (!loading && questions.length > 0) {
+    if (!loading && questions.length > 0)
+      {
       const current = questions[currentQuestionIndex];
-      const shuffled = [
-        ...current.incorrectAnswers,
+      const shuffled = 
+      [...current.incorrectAnswers,
         current.correctAnswer,
       ].sort(() => Math.random() - 0.5);
       setShuffledAnswers(shuffled);
@@ -91,7 +95,8 @@ const Quiz = ({ category }) => {
         <Results score={score} totalQuestions={questions.length} />
       ) : (
         <>
-          <h3>{category} Quiz</h3>
+
+          <h3>{categoryId||"unknown"} Quiz</h3>
           <p>Question {currentQuestionIndex + 1} of {questions.length}</p>
           <p>{currentQuestion.question}</p>
 

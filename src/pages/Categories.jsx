@@ -11,10 +11,9 @@ const categories = [
 
 const Categories = () => {
   const navigate = useNavigate();
-  const handleCategoryClick = (id) =>
+  const handleCategoryClick = (name) =>
   {
-    console.log(id)
-    navigate(`/quiz/${id}`)
+    navigate(`/quiz/${name}`)
   }
 
   return (
