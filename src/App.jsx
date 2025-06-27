@@ -9,6 +9,10 @@ import Categories from './pages/Categories';
 import Quiz from './pages/Quiz';
 import Results from './pages/Results';
 
+import { Signup } from './pages/Signup';
+
+import { Login } from './pages/Login';
+
 import './styles.css';
 
 function App() {
@@ -22,6 +26,9 @@ function App() {
             <Route path="/categories" element={<Categories />} />
             <Route path="/quiz/:categoryId" element={<Quiz />} />
             <Route path="/results" element={<Results />} />
+            <Route path="/Signup" element={<Signup />} />
+            <Route path="/Login" element={<Login />} />
+            <Route path="/Home" element={<Home />} />
           </Routes>
         </div>
         <Footer />
