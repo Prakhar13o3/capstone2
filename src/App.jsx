@@ -8,12 +8,18 @@ import Home from './pages/Home';
 import Categories from './pages/Categories';
 import Quiz from './pages/Quiz';
 import Results from './pages/Results';
+import CustomQuiz from './pages/CustomQuiz';
 
 import { Signup } from './pages/Signup';
 
 import { Login } from './pages/Login';
 
 import './styles.css';
+import CreateQuiz from './pages/CreateQuiz';
+import MyQuizzes from './pages/MyQuizes';
+import PlayedQuizzes from './pages/PlayedQuizes';
+import Challenge from './pages/Challenges';
+import ChallengeHistory from './pages/ChallengeHistory';
 
 function App() {
   return (
@@ -29,6 +35,14 @@ function App() {
             <Route path="/Signup" element={<Signup />} />
             <Route path="/Login" element={<Login />} />
             <Route path="/Home" element={<Home />} />
+            <Route path="/createquiz" element={<CreateQuiz />} />
+            <Route path="/myquizes" element={<MyQuizzes />} />
+            <Route path="/custom-quiz/:quizId" element={<CustomQuiz />} />
+            <Route path="/playedquizes" element={<PlayedQuizzes />} />
+            <Route path="/challenge/:id" element={<Challenge />} />
+            <Route path="/challenge-history" element={<ChallengeHistory />} />
+    
+
           </Routes>
         </div>
         <Footer />

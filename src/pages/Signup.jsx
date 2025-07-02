@@ -42,6 +42,7 @@ export const Signup = () => {
             </label>
 
             <button>Sign Up</button>
+            <p>Password should have more than 6 characters</p>
             <p>Already Registered? <Link className="nav-link" to="/Login">Login</Link></p>
 
         </form>
