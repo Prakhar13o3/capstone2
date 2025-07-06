@@ -40,7 +40,7 @@ function App() {
             <Route path="/custom-quiz/:quizId" element={<CustomQuiz />} />
             <Route path="/playedquizes" element={<PlayedQuizzes />} />
             <Route path="/challenge/:id" element={<Challenge />} />
-            <Route path="/challenge-history" element={<ChallengeHistory />} />
+            <Route path="/challengehistory" element={<ChallengeHistory />} />
     
 
           </Routes>

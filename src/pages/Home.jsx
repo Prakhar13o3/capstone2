@@ -2,14 +2,24 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 
 const Home = () => (
-  <div className="home">
-    <h1 className="title">Welcome to FactFrenzy</h1>
-    <div className="main-options">
-      <Link to="/categories"><button>Play Quiz</button></Link>
-      <Link to="/CreateQuiz"><button>Create Quiz</button></Link>
-      <Link to="/myquizes"><button>My Quizes</button></Link>
-      <Link to="/playedquizes"><button>Played Quizes</button></Link>
-      <Link to="/challengehistory"><button>Challenge History</button></Link>
+  <div className="home-container">
+    <h1 className="welcome-title">Welcome to FactFrenzy</h1>
+    <div className="action-buttons">
+      <Link to="/categories" className="nav-button">
+        <button className="home-btn">Play Quiz</button>
+      </Link>
+      <Link to="/CreateQuiz" className="nav-button">
+        <button className="home-btn">Create Quiz</button>
+      </Link>
+      <Link to="/myquizes" className="nav-button">
+        <button className="home-btn">My Quizzes</button>
+      </Link>
+      <Link to="/playedquizes" className="nav-button">
+        <button className="home-btn">Played Quizzes</button>
+      </Link>
+      <Link to="/challengehistory" className="nav-button">
+        <button className="home-btn">Challenge History</button>
+      </Link>
     </div>
   </div>
 );

@@ -1,99 +1,171 @@
 import React, { useEffect, useState } from 'react';
+import { collection, query, where, getDocs, doc, deleteDoc, writeBatch } from 'firebase/firestore';
 import { db, auth } from '../components/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { useNavigate } from 'react-router-dom';
 
 const ChallengeHistory = () => {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [expandedChallenge, setExpandedChallenge] = useState(null);
+  const [attempts, setAttempts] = useState({});
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchChallenges = async () => {
       const user = auth.currentUser;
       if (!user) {
-        alert('You must be logged in to view your challenge history.');
+        navigate('/login');
         return;
       }
 
-      const q = query(
-        collection(db, 'challenges'),
-        where('createdBy', '==', user.email)
-      );
-
-      const q2 = query(
-        collection(db, 'challenges'),
-        where('opponentId', '==', user.email)
-      );
-
-      const [createdSnapshot, acceptedSnapshot] = await Promise.all([
-        getDocs(q),
-        getDocs(q2),
-      ]);
-
-      const createdChallenges = createdSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        type: 'created'
-      }));
-
-      const acceptedChallenges = acceptedSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        type: 'accepted'
-      }));
-
-      const all = [...createdChallenges, ...acceptedChallenges];
-      all.sort((a, b) => b.createdAt?.toDate() - a.createdAt?.toDate());
-
-      setChallenges(all);
-      setLoading(false);
+      try {
+        const q = query(collection(db, 'challenges'), where('createdBy', '==', user.email));
+        const querySnapshot = await getDocs(q);
+        const challengesData = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data(),
+          createdAt: doc.data().createdAt?.toDate()
+        }));
+        setChallenges(challengesData);
+      } catch (error) {
+        console.error("Error loading challenges:", error);
+      } finally {
+        setLoading(false);
+      }
     };
 
     fetchChallenges();
-  }, []);
+  }, [navigate]);
 
-  if (loading) return <p>Loading challenge history...</p>;
+  const fetchAttempts = async (challengeId) => {
+    try {
+      const q = query(collection(db, 'quizAttempts'), where('challengeId', '==', challengeId));
+      const querySnapshot = await getDocs(q);
+      const attemptsData = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        playedAt: doc.data().playedAt?.toDate()
+      }));
+      setAttempts(prev => ({ ...prev, [challengeId]: attemptsData }));
+    } catch (error) {
+      console.error("Error loading attempts:", error);
+    }
+  };
 
-  if (!challenges.length) return <p>No challenges yet!</p>;
+  const toggleChallenge = async (challengeId) => {
+    if (expandedChallenge === challengeId) {
+      setExpandedChallenge(null);
+    } else {
+      setExpandedChallenge(challengeId);
+      if (!attempts[challengeId]) {
+        await fetchAttempts(challengeId);
+      }
+    }
+  };
+
+  const deleteChallenge = async (challengeId) => {
+    if (!window.confirm('Delete this challenge and all its attempts?')) return;
+    
+    try {
+      const batch = writeBatch(db);
+      
+      const attemptsQuery = query(collection(db, 'quizAttempts'), where('challengeId', '==', challengeId));
+      const attemptsSnapshot = await getDocs(attemptsQuery);
+      attemptsSnapshot.forEach(doc => batch.delete(doc.ref));
+      
+      batch.delete(doc(db, 'challenges', challengeId));
+      await batch.commit();
+      
+      setChallenges(prev => prev.filter(c => c.id !== challengeId));
+      setAttempts(prev => {
+        const newAttempts = { ...prev };
+        delete newAttempts[challengeId];
+        return newAttempts;
+      });
+    } catch (error) {
+      console.error("Error deleting challenge:", error);
+    }
+  };
+
+  const deleteAllChallenges = async () => {
+    if (!window.confirm('Delete ALL challenges and attempts? This cannot be undone.')) return;
+    
+    try {
+      const batch = writeBatch(db);
+      
+      for (const challenge of challenges) {
+        const attemptsQuery = query(collection(db, 'quizAttempts'), where('challengeId', '==', challenge.id));
+        const attemptsSnapshot = await getDocs(attemptsQuery);
+        attemptsSnapshot.forEach(doc => batch.delete(doc.ref));
+        batch.delete(doc(db, 'challenges', challenge.id));
+      }
+      
+      await batch.commit();
+      setChallenges([]);
+      setAttempts({});
+    } catch (error) {
+      console.error("Error deleting all challenges:", error);
+    }
+  };
+
+  if (loading) return <div style={{ textAlign: 'center' }}>Loading challenges...</div>;
 
   return (
-    <div className="challenge-history">
-      <h2>My Challenge History</h2>
-      {challenges.map(challenge => {
-        let result = '—';
-        if (challenge.status === 'completed') {
-          if (challenge.createdScore > challenge.opponentScore) {
-            result = challenge.type === 'created' ? 'You Won' : 'You Lost';
-          } else if (challenge.createdScore < challenge.opponentScore) {
-            result = challenge.type === 'created' ? 'You Lost' : 'You Won';
-          } else {
-            result = 'Draw';
-          }
-        }
-
-        return (
-          <div key={challenge.id} className="challenge-card">
-            <h3>{challenge.type === 'created' ? 'You challenged someone' : 'You accepted a challenge'}</h3>
-            <p>Quiz ID: {challenge.quizId}</p>
-            <p>Your Score: {challenge.type === 'created' ? challenge.createdScore : challenge.opponentScore || '—'}</p>
-            <p>
-              {challenge.type === 'created'
-                ? `Opponent: ${challenge.opponentId || '—'}`
-                : `Original Player: ${challenge.createdBy}`}
-            </p>
-            {challenge.opponentScore !== undefined && (
-              <p>Opponent Score: {challenge.opponentScore}</p>
-            )}
-            <p>Status: {challenge.status}</p>
-            {challenge.status === 'completed' && (
-              <p>Result: {result}</p>
-            )}
-            <p>Created At: {challenge.createdAt?.toDate().toLocaleString()}</p>
-            {challenge.completedAt && (
-              <p>Completed At: {challenge.completedAt?.toDate().toLocaleString()}</p>
-            )}
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <h2 style={{ textAlign: 'center' }}>Challenge History</h2>
+      
+      {challenges.length === 0 ? (
+        <div style={{ textAlign: 'center' }}>
+          <p>No challenges found</p>
+          <button onClick={() => navigate('/myquizes')}>Create Challenge</button>
+        </div>
+      ) : (
+        <div>
+          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+            <button onClick={deleteAllChallenges}>Delete All History</button>
           </div>
-        );
-      })}
+          
+          {challenges.map(challenge => (
+            <div key={challenge.id} style={{ marginBottom: '20px', border: '1px solid #ddd', padding: '15px' }}>
+              <div onClick={() => toggleChallenge(challenge.id)} style={{ cursor: 'pointer' }}>
+                <h3>{challenge.quizTitle || 'Untitled Quiz'}</h3>
+                <p>Created: {challenge.createdAt?.toLocaleString() || 'N/A'}</p>
+                <button onClick={(e) => { e.stopPropagation(); deleteChallenge(challenge.id); }}>
+                  Delete
+                </button>
+              </div>
+
+              {expandedChallenge === challenge.id && (
+                <div style={{ marginTop: '15px' }}>
+                  <h4>Attempts</h4>
+                  {attempts[challenge.id]?.length > 0 ? (
+                    <table style={{ width: '100%', marginTop: '10px' }}>
+                      <thead>
+                        <tr>
+                          <th>Player</th>
+                          <th>Score</th>
+                          <th>Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {attempts[challenge.id].map(attempt => (
+                          <tr key={attempt.id}>
+                            <td>{attempt.userId}</td>
+                            <td>{attempt.score}/{attempt.totalQuestions}</td>
+                            <td>{attempt.playedAt?.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : (
+                    <p>No attempts</p>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

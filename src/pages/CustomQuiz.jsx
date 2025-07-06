@@ -1,18 +1,23 @@
 import React, { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
-import { doc, getDoc, collection, addDoc } from 'firebase/firestore'; // ✅ add `collection` and `addDoc`
-import { db, auth } from '../components/firebase'; // ✅ import `auth`
+import { useParams, useNavigate } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { auth, db } from '../components/firebase';
 import Results from './Results';
 
 const CustomQuiz = () => {
   const { quizId } = useParams();
+  const navigate = useNavigate();
+
+  const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [isQuizOver, setIsQuizOver] = useState(false);
   const [timer, setTimer] = useState(30);
+  const [isQuizOver, setIsQuizOver] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [answerStatus, setAnswerStatus] = useState(null);
 
   useEffect(() => {
     const fetchQuiz = async () => {
@@ -20,102 +25,139 @@ const CustomQuiz = () => {
         const quizRef = doc(db, 'quizzes', quizId);
         const quizSnap = await getDoc(quizRef);
 
-        if (quizSnap.exists()) {
-          const quizData = quizSnap.data();
-          setQuestions(quizData.questions);
-        } else {
-          setError('Quiz not found');
+        if (!quizSnap.exists()) {
+          throw new Error('Quiz not found');
         }
-      } catch (err) {
-        console.error(err);
-        setError(err.message);
-      } finally {
+
+        const quizData = quizSnap.data();
+        const validatedQuestions = quizData.questions.map((q, i) => {
+          const options = Array.isArray(q.options) ? q.options : [];
+          let correctIndex = typeof q.correctIndex === 'number' ? 
+            Math.max(0, Math.min(q.correctIndex, options.length - 1)) : 0;
+          
+          return {
+            question: q.question || 'No question text',
+            options: options,
+            correctIndex: correctIndex
+          };
+        });
+
+        setQuiz({ id: quizSnap.id, ...quizData });
+        setQuestions(validatedQuestions);
         setLoading(false);
+      } catch (err) {
+        console.error('Error loading quiz:', err);
+        setError(err.message);
+        setLoading(false);
+        navigate('/myquizes');
       }
     };
 
     fetchQuiz();
-  }, [quizId]);
+  }, [quizId, navigate]);
 
-  const currentQuestion = questions[currentQuestionIndex] || {};
-
-  const handleAnswer = (selectedAnswer) => {
-    const isCorrect = currentQuestion.options.indexOf(selectedAnswer) === currentQuestion.correctIndex;
-    if (isCorrect) setScore((prev) => prev + 1);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setTimer(30);
-    } else {
-      setIsQuizOver(true);
-    }
-  };
-
-  // ✅ Save attempt when quiz ends
+  // Timer effect
   useEffect(() => {
-    const saveAttempt = async () => {
-      if (isQuizOver) {
-        const user = auth.currentUser;
-        if (!user) {
-          console.log('Not logged in, attempt not saved.');
-          return;
-        }
-
-        try {
-          await addDoc(collection(db, 'quizAttempts'), {
-            userId: user.email,
-            quizId: quizId,
-            quizTitle: 'My Custom Quiz',
-            score: score,
-            playedAt: new Date(),
-          });
-          console.log('Custom quiz attempt saved!');
-        } catch (err) {
-          console.error('Error saving attempt:', err);
-        }
-      }
-    };
-
-    saveAttempt();
-  }, [isQuizOver, quizId, score]);
-
-  useEffect(() => {
-    if (!loading && !isQuizOver && timer === 0) {
-      handleAnswer(null); // auto skip
+    let timerInterval;
+    
+    if (questions.length > 0 && !isQuizOver && !answerStatus) {
+      timerInterval = setInterval(() => {
+        setTimer(prevTimer => {
+          if (prevTimer <= 1) {
+            clearInterval(timerInterval);
+            handleAnswer(-1); // Auto-submit when time runs out
+            return 0;
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
     }
 
-    const interval = setInterval(() => {
-      if (!loading && !isQuizOver) {
-        setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+    return () => clearInterval(timerInterval);
+  }, [questions, currentQuestionIndex, isQuizOver, answerStatus]);
+
+  const handleAnswer = (selectedIndex) => {
+    const currentQuestion = questions[currentQuestionIndex];
+    setSelectedOption(selectedIndex);
+
+    if (!currentQuestion || !Array.isArray(currentQuestion.options)) {
+      setAnswerStatus('Error: Invalid question format');
+      return;
+    }
+
+    const isCorrect = selectedIndex === currentQuestion.correctIndex;
+    setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+
+    if (isCorrect) {
+      setScore(prev => prev + 1);
+    }
+
+    setTimeout(() => {
+      setAnswerStatus(null);
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setTimer(30);
+        setSelectedOption(null);
+      } else {
+        setIsQuizOver(true);
       }
     }, 1000);
+  };
 
-    return () => clearInterval(interval);
-  }, [timer, loading, isQuizOver]);
+  if (loading) return <div>Loading quiz...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!questions.length) return <div>No questions found in this quiz</div>;
 
-  if (loading) return <p>Loading quiz...</p>;
-  if (error) return <p>{error}</p>;
-  if (!questions.length) return <p>No questions found.</p>;
+  const currentQuestion = questions[currentQuestionIndex];
 
   return (
     <div className="quiz-container">
       {isQuizOver ? (
-        <Results score={score} totalQuestions={questions.length} />
+        <Results 
+          score={score} 
+          totalQuestions={questions.length} 
+          quizTitle={quiz?.title}
+        />
       ) : (
         <>
-          <h3>Custom Quiz</h3>
-          <p>Question {currentQuestionIndex + 1} of {questions.length}</p>
-          <p>{currentQuestion.question}</p>
+          <h2>{quiz?.title || 'Custom Quiz'}</h2>
+          <div>Question {currentQuestionIndex + 1} of {questions.length}</div>
 
-          <div className="answers">
-            {currentQuestion.options.map((answer, idx) => (
-              <button key={idx} onClick={() => handleAnswer(answer)}>
-                {answer}
-              </button>
-            ))}
+          
+          <div>
+            <h3>{currentQuestion.question}</h3>
+            <div>
+              {currentQuestion.options.map((option, index) => (
+                <button 
+                  key={index} 
+                  onClick={() => handleAnswer(index)}
+                  style={{
+                    backgroundColor: selectedOption === index ? 
+                      (answerStatus === 'correct' ? 'green' : 
+                       answerStatus === 'incorrect' ? 'red' : '#f0f0f0') : '',
+                    color: selectedOption === index ? 'white' : 'black',
+                    margin: '5px',
+                    padding: '8px 12px',
+                    cursor: 'pointer'
+                  }}
+                >
+                  {option}
+                  {selectedOption === index && (
+                    <span style={{ marginLeft: '10px' }}>
+                      {answerStatus === 'correct' ? '✓' : answerStatus === 'incorrect' ? '✗' : ''}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+            {answerStatus === 'correct' && <div style={{ color: 'green' }}>Correct!</div>}
+            {answerStatus === 'incorrect' && (
+              <div style={{ color: 'red' }}>
+                Wrong! The correct answer is: {currentQuestion.options[currentQuestion.correctIndex]}
+              </div>
+            )}
           </div>
-
-          <p className="timer">Time left: {timer}s</p>
+                    <div>Time left: {timer}s</div>
         </>
       )}
     </div>

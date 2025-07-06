@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { auth, db } from '../components/firebase';
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, updateDoc, collection, addDoc } from 'firebase/firestore';
 import Results from './Results';
 
 const Challenge = () => {
@@ -9,167 +9,200 @@ const Challenge = () => {
   const navigate = useNavigate();
 
   const [challenge, setChallenge] = useState(null);
-  const [quiz, setQuiz] = useState(null);
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
-  const [shuffledAnswers, setShuffledAnswers] = useState([]);
-  const [timer, setTimer] = useState(30);
   const [isQuizOver, setIsQuizOver] = useState(false);
+  const [timer, setTimer] = useState(30);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(null);
+  const [answerStatus, setAnswerStatus] = useState(null);
 
   useEffect(() => {
     const fetchChallengeAndQuiz = async () => {
       const user = auth.currentUser;
-
       if (!user) {
-        alert('You must be logged in to accept a challenge.');
         navigate('/login', { state: { from: `/challenge/${id}` } });
         return;
       }
 
-      const challengeRef = doc(db, 'challenges', id);
-      const challengeSnap = await getDoc(challengeRef);
+      try {
+        const challengeRef = doc(db, 'challenges', id);
+        const challengeSnap = await getDoc(challengeRef);
 
-      if (!challengeSnap.exists()) {
-        alert('Challenge not found.');
-        navigate('/');
-        return;
-      }
-
-      const challengeData = challengeSnap.data();
-      setChallenge({ id: challengeSnap.id, ...challengeData });
-
-      if (challengeData.quizType === 'custom') {
-        const quizRef = doc(db, 'quizzes', challengeData.quizId);
-        const quizSnap = await getDoc(quizRef);
-
-        if (!quizSnap.exists()) {
-          alert('Quiz not found.');
-          navigate('/');
-          return;
+        if (!challengeSnap.exists()) {
+          throw new Error('Challenge not found');
         }
 
-        const quizData = quizSnap.data();
-        setQuiz(quizData);
-        setQuestions(quizData.questions);
-        setLoading(false);
+        const challengeData = challengeSnap.data();
+        setChallenge({ id: challengeSnap.id, ...challengeData });
 
-      } else if (challengeData.quizType === 'api') {
-        try {
+        if (challengeData.quizType === 'custom') {
+          const quizRef = doc(db, 'quizzes', challengeData.quizId);
+          const quizSnap = await getDoc(quizRef);
+          
+          if (quizSnap.exists()) {
+            const quizData = quizSnap.data();
+            const validatedQuestions = quizData.questions.map(q => ({
+              question: q.question,
+              options: q.options || [],
+              correctIndex: typeof q.correctIndex === 'number' ? 
+                Math.max(0, Math.min(q.correctIndex, q.options.length - 1)) : 0
+            }));
+            setQuestions(validatedQuestions);
+          }
+        } else {
+          // API quiz loading logic
           const res = await fetch(
-            `https://opentdb.com/api.php?amount=5&category=${challengeData.quizCategory}&type=multiple`
+            `https://the-trivia-api.com/api/questions?categories=${challengeData.quizCategory}&limit=5&difficulty=medium`
           );
           const data = await res.json();
-
-          const formatted = data.results.map((q) => {
-            const options = [...q.incorrect_answers];
-            const correctIndex = Math.floor(Math.random() * (options.length + 1));
-            options.splice(correctIndex, 0, q.correct_answer);
-
-            return {
-              question: q.question,
-              options,
-              correctIndex
-            };
-          });
-
-          setQuiz({ title: `API Category ${challengeData.quizCategory}` });
-          setQuestions(formatted);
-          setLoading(false);
-        } catch (err) {
-          console.error(err);
-          alert('Failed to load API quiz.');
-          navigate('/');
+          setQuestions(data.map(q => ({
+            question: q.question,
+            options: [...q.incorrectAnswers, q.correctAnswer].sort(() => Math.random() - 0.5),
+            correctAnswer: q.correctAnswer
+          })));
         }
-
-      } else {
-        alert('Unknown quiz type.');
-        navigate('/');
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchChallengeAndQuiz();
   }, [id, navigate]);
 
-  useEffect(() => {
-    if (!loading && !isQuizOver && timer === 0) {
-      handleAnswer();
+  const handleAnswer = (selectedAnswer) => {
+    const currentQuestion = questions[currentQuestionIndex];
+    let isCorrect = false;
+
+    if (challenge.quizType === 'custom') {
+      // For custom quizzes, compare selected index with correctIndex
+      const selectedIndex = currentQuestion.options.indexOf(selectedAnswer);
+      isCorrect = selectedIndex === currentQuestion.correctIndex;
+    } else {
+      // For API quizzes, compare selected answer with correctAnswer
+      isCorrect = selectedAnswer === currentQuestion.correctAnswer;
     }
 
-    const interval = setInterval(() => {
-      if (!loading && !isQuizOver) {
-        setTimer((prev) => (prev > 0 ? prev - 1 : 0));
+    setSelectedOption(selectedAnswer);
+    setAnswerStatus(isCorrect ? 'correct' : 'incorrect');
+
+    if (isCorrect) {
+      setScore(prev => prev + 1);
+    }
+
+    setTimeout(() => {
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(prev => prev + 1);
+        setTimer(30);
+        setSelectedOption(null);
+        setAnswerStatus(null);
+      } else {
+        setIsQuizOver(true);
       }
     }, 1000);
+  };
 
-    return () => clearInterval(interval);
-  }, [timer, loading, isQuizOver]);
+  const saveAttempt = async () => {
+    const user = auth.currentUser;
+    if (!user || !challenge) return;
 
-  useEffect(() => {
-    if (!loading && questions.length > 0) {
-      const current = questions[currentQuestionIndex];
-      const shuffled = [...current.options].sort(() => Math.random() - 0.5);
-      setShuffledAnswers(shuffled);
-    }
-  }, [currentQuestionIndex, questions, loading]);
+    try {
+      await addDoc(collection(db, 'quizAttempts'), {
+        userId: user.email,
+        challengeId: challenge.id,
+        quizId: challenge.quizId,
+        quizTitle: challenge.quizTitle,
+        score: score,
+        totalQuestions: questions.length,
+        playedAt: new Date(),
+        isChallenge: true
+      });
 
-  const handleAnswer = (answer) => {
-    const current = questions[currentQuestionIndex];
-    const isCorrect = answer === current.options[current.correctIndex];
-    if (isCorrect) setScore((prev) => prev + 1);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setTimer(30);
-    } else {
-      setIsQuizOver(true);
+      if (user.email !== challenge.createdBy) {
+        await updateDoc(doc(db, 'challenges', challenge.id), {
+          opponentId: user.email,
+          opponentScore: score,
+          status: 'completed',
+          completedAt: new Date()
+        });
+      }
+    } catch (error) {
+      console.error("Error saving attempt:", error);
     }
   };
 
   useEffect(() => {
-    const saveResult = async () => {
-      if (isQuizOver && challenge && auth.currentUser) {
-        const challengeRef = doc(db, 'challenges', challenge.id);
-        await updateDoc(challengeRef, {
-          opponentId: auth.currentUser.email,
-          opponentScore: score,
-          status: 'completed',
-          completedAt: new Date(),
-        });
+    if (isQuizOver) {
+      saveAttempt();
+    }
+  }, [isQuizOver]);
+
+  useEffect(() => {
+    if (!loading && !isQuizOver && timer === 0) {
+      handleAnswer(null);
+    }
+
+    const interval = setInterval(() => {
+      if (!loading && !isQuizOver && !answerStatus) {
+        setTimer(prev => (prev > 0 ? prev - 1 : 0));
       }
-    };
+    }, 1000);
 
-    saveResult();
-  }, [isQuizOver, challenge, score]);
+    return () => clearInterval(interval);
+  }, [timer, loading, isQuizOver, answerStatus]);
 
-  if (loading) return <p>Loading challenge quiz...</p>;
+  if (loading) return <div>Loading challenge...</div>;
+  if (error) return <div>Error: {error}</div>;
+  if (!questions.length) return <div>No questions found.</div>;
 
   const currentQuestion = questions[currentQuestionIndex];
+  const isCustomQuiz = challenge.quizType === 'custom';
 
   return (
     <div className="quiz-container">
       {isQuizOver ? (
-        <Results
-          score={score}
-          totalQuestions={questions.length}
-          extra={<p>Original Player’s Score: {challenge.createdScore}</p>}
-        />
+        <Results score={score} totalQuestions={questions.length} />
       ) : (
         <>
-          <h2>Challenge Quiz</h2>
+          <h2>Challenge: {challenge.quizTitle}</h2>
           <p>Question {currentQuestionIndex + 1} of {questions.length}</p>
-          <p dangerouslySetInnerHTML={{ __html: currentQuestion.question }}></p>
+          <p>{currentQuestion.question}</p>
 
           <div className="answers">
-            {shuffledAnswers.map((ans, idx) => (
-              <button key={idx} onClick={() => handleAnswer(ans)}
-                dangerouslySetInnerHTML={{ __html: ans }}>
+            {currentQuestion.options.map((option, idx) => (
+              <button
+                key={idx}
+                onClick={() => handleAnswer(option)}
+                style={{
+                  backgroundColor: selectedOption === option ? 
+                    (answerStatus === 'correct' ? 'green' : 
+                     answerStatus === 'incorrect' ? 'red' : '#f0f0f0') : '',
+                  color: selectedOption === option ? 'white' : 'black'
+                }}
+              >
+                {option}
+                {selectedOption === option && (
+                  <span style={{ marginLeft: '10px' }}>
+                    {answerStatus === 'correct' ? '✓' : answerStatus === 'incorrect' ? '✗' : ''}
+                  </span>
+                )}
               </button>
             ))}
           </div>
 
-          <p>Time Left: {timer}s</p>
+          {answerStatus === 'correct' && <p>Correct!</p>}
+          {answerStatus === 'incorrect' && (
+            <p>Wrong! The correct answer is: {
+              isCustomQuiz 
+                ? currentQuestion.options[currentQuestion.correctIndex] 
+                : currentQuestion.correctAnswer
+            }</p>
+          )}
+                    <p>Time left: {timer}s</p>
         </>
       )}
     </div>

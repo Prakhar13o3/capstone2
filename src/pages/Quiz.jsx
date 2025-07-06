@@ -1,11 +1,11 @@
-// ✅ Add at top if not already
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams } from 'react-router-dom';
+import { collection, addDoc } from 'firebase/firestore';
+import { db, auth } from '../components/firebase';
+import Results from './Results';
 
 const Quiz = () => {
   const { categoryId } = useParams();
-  const navigate = useNavigate(); // ✅
-
-  // other state stays same
   const [questions, setQuestions] = useState([]);
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [score, setScore] = useState(0);
@@ -21,16 +21,8 @@ const Quiz = () => {
     'General Knowledge': 'general_knowledge',
     Science: 'science',
     Geography: 'geography',
-    History: 'history',
+    History: 'history'
   };
-
-  // ✅ ENFORCE LOGIN BEFORE PLAYING
-  useEffect(() => {
-    if (!auth.currentUser) {
-      alert('Please log in first!');
-      navigate('/login');
-    }
-  }, []);
 
   useEffect(() => {
     const fetchQuestions = async () => {
@@ -39,12 +31,11 @@ const Quiz = () => {
         const response = await fetch(
           `https://the-trivia-api.com/api/questions?categories=${apiCategory}&limit=10&difficulty=medium`
         );
-
         const data = await response.json();
         setQuestions(data);
+        setLoading(false);
       } catch (err) {
         setError(err.message);
-      } finally {
         setLoading(false);
       }
     };
@@ -52,11 +43,9 @@ const Quiz = () => {
     fetchQuestions();
   }, [categoryId]);
 
-  // ✅ SAME TIMER + SHUFFLING LOGIC (unchanged)
-
   useEffect(() => {
     if (!loading && !isQuizOver && timer === 0) {
-      handleAnswer();
+      handleAnswer(); // auto skip on timeout
     }
 
     const timerInterval = setInterval(() => {
@@ -71,10 +60,7 @@ const Quiz = () => {
   useEffect(() => {
     if (!loading && questions.length > 0) {
       const current = questions[currentQuestionIndex];
-      const shuffled = [
-        ...current.incorrectAnswers,
-        current.correctAnswer,
-      ].sort(() => Math.random() - 0.5);
+      const shuffled = [...current.incorrectAnswers, current.correctAnswer].sort(() => Math.random() - 0.5);
       setShuffledAnswers(shuffled);
     }
   }, [currentQuestionIndex, questions, loading]);
@@ -92,30 +78,33 @@ const Quiz = () => {
   };
 
   useEffect(() => {
-    if (isQuizOver) {
-      saveAttempt();
-    }
-  }, [isQuizOver]);
+    const saveAttempt = async () => {
+      if (isQuizOver) {
+        const user = auth.currentUser;
+        if (!user) {
+          console.log('Not logged in, attempt not saved.');
+          return;
+        }
 
-  const saveAttempt = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+        try {
+          await addDoc(collection(db, 'quizAttempts'), {
+            userId: user.email,
+            quizId: categoryId,
+            quizTitle: `${categoryId} Quiz`,
+            quizCategory: categoryMapping[categoryId],
+            score: score,
+            totalQuestions: questions.length,
+            playedAt: new Date(),
+          });
+          console.log('API quiz attempt saved!');
+        } catch (err) {
+          console.error('Error saving attempt:', err);
+        }
+      }
+    };
 
-    try {
-      await addDoc(collection(db, 'quizAttempts'), {
-        userId: user.email,
-        quizId: categoryId,      // ✅ for API quiz: category name
-        quizTitle: categoryId,   // ✅
-        quizType: 'api',         // ✅ distinguish type
-        score: score,
-        playedAt: new Date(),
-      });
-
-      console.log('API quiz attempt saved!');
-    } catch (error) {
-      console.error('Error saving attempt:', error);
-    }
-  };
+    saveAttempt();
+  }, [isQuizOver, categoryId, score, categoryMapping]);
 
   if (loading) return <p>Loading questions...</p>;
   if (error) return <p>{error}</p>;

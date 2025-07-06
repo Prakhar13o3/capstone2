@@ -1,94 +1,102 @@
 import React, { useEffect, useState } from 'react';
 import { db, auth } from '../components/firebase';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
-import { Link } from 'react-router-dom';
+import { collection, query, where, getDocs, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
 
 const PlayedQuizzes = () => {
   const [attempts, setAttempts] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [challengeLink, setChallengeLink] = useState('');
 
   useEffect(() => {
-    const fetchAttempts = async () => {
-      const user = auth.currentUser;
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
       if (!user) {
         alert('You must be logged in!');
+        setLoading(false);
         return;
       }
 
+      fetchAttempts(user.email);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  const fetchAttempts = async (userEmail) => {
+    try {
+      setLoading(true);
       const q = query(
         collection(db, 'quizAttempts'),
-        where('userId', '==', user.email)
+        where('userId', '==', userEmail)
       );
 
       const snapshot = await getDocs(q);
       const data = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data(),
+        playedAt: doc.data().playedAt?.toDate()
       }));
 
+      data.sort((a, b) => b.playedAt - a.playedAt);
       setAttempts(data);
+    } catch (error) {
+      console.error("Error loading attempts:", error);
+    } finally {
       setLoading(false);
-    };
-
-    fetchAttempts();
-  }, []);
-
-  const handleCreateChallenge = async (attempt) => {
-  try {
-    let quizType = 'custom';
-    let quizCategory = '';
-
-    if (attempt.quizId === attempt.quizTitle) {
-      quizType = 'api';
-      quizCategory = attempt.categoryId; // ✅ Use ID, not title!
     }
+  };
 
-    const challengeRef = await addDoc(collection(db, 'challenges'), {
-      quizId: attempt.quizId,
-      quizTitle: attempt.quizTitle,
-      quizType: quizType,
-      quizCategory: quizCategory,
-      createdBy: auth.currentUser.email,
-      createdScore: attempt.score,
-      status: 'pending',
-      createdAt: new Date(),
-    });
+  const handleDelete = async (id) => {
+    if (window.confirm('Are you sure you want to delete this attempt?')) {
+      await deleteDoc(doc(db, 'quizAttempts', id));
+      setAttempts(prev => prev.filter(a => a.id !== id));
+    }
+  };
 
-    const link = `${window.location.origin}/challenge/${challengeRef.id}`;
-    setChallengeLink(link);
-    alert(`Challenge link ready! Share this: ${link}`);
-  } catch (error) {
-    console.error('Error creating challenge:', error);
-  }
-};
+  const deleteAllAttempts = async () => {
+    if (!window.confirm('Delete ALL quiz attempts? This cannot be undone.')) return;
+    
+    try {
+      const batch = writeBatch(db);
+      
+      for (const attempt of attempts) {
+        batch.delete(doc(db, 'quizAttempts', attempt.id));
+      }
+      
+      await batch.commit();
+      setAttempts([]);
+    } catch (error) {
+      console.error("Error deleting all attempts:", error);
+    }
+  };
 
+  if (loading) return <div style={{ textAlign: 'center' }}>Loading your quiz attempts...</div>;
 
-  if (loading) return <p>Loading your quiz attempts...</p>;
-
-  if (!attempts.length) return <p>No quizzes played yet!</p>;
+  if (!attempts.length) return (
+    <div style={{ textAlign: 'center' }}>
+      <p>No quizzes played yet!</p>
+    </div>
+  );
 
   return (
-    <div className="my-quizzes">
-      <h2>My Played Quizzes</h2>
-
+    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
+      <h2 style={{ textAlign: 'center' }}>My Played Quizzes</h2>
+      
+      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
+        <button onClick={deleteAllAttempts}>Delete All History</button>
+      </div>
+      
       {attempts.map((attempt) => (
-        <div key={attempt.id} className="quiz-card">
+        <div key={attempt.id} style={{ 
+          border: '1px solid #ddd', 
+          padding: '15px', 
+          marginBottom: '15px'
+        }}>
           <h3>{attempt.quizTitle || 'Untitled Quiz'}</h3>
-          <p>Score: {attempt.score}</p>
-          <p>Played At: {attempt.playedAt?.toDate().toLocaleString()}</p>
-          <button onClick={() => handleCreateChallenge(attempt)}>
-            Challenge a Friend
-          </button>
+          <p>Score: {attempt.score}/{attempt.totalQuestions}</p>
+          <p>Played At: {attempt.playedAt?.toLocaleString()}</p>
+          <button onClick={() => handleDelete(attempt.id)}>Delete</button>
         </div>
       ))}
-
-      {challengeLink && (
-        <div>
-          <p>Share this link with your friend:</p>
-          <a href={challengeLink} target="_blank" rel="noopener noreferrer">{challengeLink}</a>
-        </div>
-      )}
     </div>
   );
 };
