@@ -50,10 +50,11 @@ const MyQuizzes = () => {
         createdScore: 0,
         status: 'pending',
         createdAt: new Date(),
-        questions: quiz.questions || [] // Include questions for immediate access
+        questions: quiz.questions || []
       });
 
-      const link = `${window.location.origin}/challenge/${challengeRef.id}`;
+      // ONLY CHANGE MADE: Added hash (#) before the challenge path
+      const link = `${window.location.origin}/#/challenge/${challengeRef.id}`;
       setChallengeLink(link);
       navigator.clipboard.writeText(link);
       alert(`Challenge link copied to clipboard! Share this: ${link}`);
@@ -68,6 +69,7 @@ const MyQuizzes = () => {
   return (
     <div className="my-quizzes-container">
       <h2>My Quizzes</h2>
+      
       {quizzes.length === 0 ? (
         <p>You haven't created any quizzes yet.</p>
       ) : (
