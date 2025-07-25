@@ -15,6 +15,8 @@ const Quiz = () => {
   const [shuffledAnswers, setShuffledAnswers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [selectedAnswer, setSelectedAnswer] = useState(null);
+  const [isCorrect, setIsCorrect] = useState(null);
 
   const categoryMapping = {
     English: 'arts_and_literature',
@@ -45,7 +47,7 @@ const Quiz = () => {
 
   useEffect(() => {
     if (!loading && !isQuizOver && timer === 0) {
-      handleAnswer(); // auto skip on timeout
+      handleAnswer(null); // auto skip on timeout
     }
 
     const timerInterval = setInterval(() => {
@@ -65,16 +67,27 @@ const Quiz = () => {
     }
   }, [currentQuestionIndex, questions, loading]);
 
-  const handleAnswer = (isCorrect = false) => {
-    setAnsweredQuestions((prev) => prev + 1);
-    if (isCorrect) setScore((prev) => prev + 1);
-
-    if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex((prev) => prev + 1);
-      setTimer(30);
-    } else {
-      setIsQuizOver(true);
+  const handleAnswer = (answer) => {
+    const correct = answer === questions[currentQuestionIndex]?.correctAnswer;
+    setSelectedAnswer(answer);
+    setIsCorrect(correct);
+    
+    if (correct) {
+      setScore((prev) => prev + 1);
     }
+
+    setTimeout(() => {
+      setAnsweredQuestions((prev) => prev + 1);
+      setSelectedAnswer(null);
+      setIsCorrect(null);
+      
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex((prev) => prev + 1);
+        setTimer(30);
+      } else {
+        setIsQuizOver(true);
+      }
+    }, 1000);
   };
 
   useEffect(() => {
@@ -108,6 +121,7 @@ const Quiz = () => {
 
   if (loading) return <p>Loading questions...</p>;
   if (error) return <p>{error}</p>;
+  if (!questions.length) return <p>No questions found</p>;
 
   const currentQuestion = questions[currentQuestionIndex];
 
@@ -125,12 +139,29 @@ const Quiz = () => {
             {shuffledAnswers.map((answer, idx) => (
               <button
                 key={idx}
-                onClick={() => handleAnswer(answer === currentQuestion.correctAnswer)}
+                onClick={() => handleAnswer(answer)}
+                style={{
+                  backgroundColor: selectedAnswer === answer
+                    ? isCorrect ? 'green' : 'red' : '',
+                  color: selectedAnswer === answer ? 'white' : 'black'
+                }}
+                disabled={selectedAnswer !== null}
               >
                 {answer}
+                {selectedAnswer === answer && (
+                  <span style={{ marginLeft: '10px' }}>
+                    {isCorrect ? '✓' : '✗'}
+                  </span>
+                )}
               </button>
             ))}
           </div>
+
+          {selectedAnswer !== null && !isCorrect && (
+            <p style={{ color: 'red' }}>
+              Correct answer: {currentQuestion.correctAnswer}
+            </p>
+          )}
 
           <p className="timer">Time left: {timer}s</p>
         </>
