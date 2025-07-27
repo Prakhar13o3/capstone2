@@ -39,7 +39,6 @@ function App() {
             <Route path="*" element={<Home />} /> {/* Fallback route */}
           </Routes>
         </div>
-        <Footer />
       </div>
     </Router>
   );

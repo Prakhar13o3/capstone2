@@ -53,7 +53,6 @@ const MyQuizzes = () => {
         questions: quiz.questions || []
       });
 
-      // ONLY CHANGE MADE: Added hash (#) before the challenge path
       const link = `${window.location.origin}/#/challenge/${challengeRef.id}`;
       setChallengeLink(link);
       navigator.clipboard.writeText(link);
@@ -67,43 +66,45 @@ const MyQuizzes = () => {
   if (loading) return <div>Loading your quizzes...</div>;
 
   return (
-    <div className="my-quizzes-container">
-      <h2>My Quizzes</h2>
-      
-      {quizzes.length === 0 ? (
-        <p>You haven't created any quizzes yet.</p>
-      ) : (
-        <div className="quiz-list">
-          {quizzes.map((quiz) => (
-            <div key={quiz.id} className="quiz-item">
-              <h3>{quiz.title || 'Untitled Quiz'}</h3>
-              <div className="quiz-actions">
-                <Link to={`/custom-quiz/${quiz.id}`}>
-                  <button className="play-button">Play Quiz</button>
-                </Link>
-                <button 
-                  onClick={() => handleCreateChallenge(quiz)}
-                  className="challenge-button"
-                >
-                  Challenge a Friend
-                </button>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+    <div className="main-content">
+      <div className="quiz-container my-quizzes-container">
+        <h1 className="welcome-title">My Quizzes</h1>
 
-      {challengeLink && (
-        <div className="challenge-link">
-          <p>Share this challenge link:</p>
-          <input 
-            type="text" 
-            value={challengeLink} 
-            readOnly 
-            onClick={(e) => e.target.select()}
-          />
-        </div>
-      )}
+        {quizzes.length === 0 ? (
+          <p>You haven't created any quizzes yet.</p>
+        ) : (
+          <div className="quiz-list">
+            {quizzes.map((quiz) => (
+              <div key={quiz.id} className="quiz-item">
+                <h3>{quiz.title || 'Untitled Quiz'}</h3>
+                <div className="quiz-actions">
+                  <Link to={`/custom-quiz/${quiz.id}`}>
+                    <button className="play-button">Play Quiz</button>
+                  </Link>
+                  <button 
+                    onClick={() => handleCreateChallenge(quiz)}
+                    className="challenge-button"
+                  >
+                    Challenge a Friend
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {challengeLink && (
+          <div className="challenge-link">
+            <p>Share this challenge link:</p>
+            <input 
+              type="text" 
+              value={challengeLink} 
+              readOnly 
+              onClick={(e) => e.target.select()}
+            />
+          </div>
+        )}
+      </div>
     </div>
   );
 };

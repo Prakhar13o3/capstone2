@@ -3,6 +3,7 @@ import { collection, query, where, getDocs, doc, deleteDoc, writeBatch } from 'f
 import { db, auth } from '../components/firebase';
 import { useNavigate } from 'react-router-dom';
 
+
 const ChallengeHistory = () => {
   const [challenges, setChallenges] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -65,17 +66,17 @@ const ChallengeHistory = () => {
 
   const deleteChallenge = async (challengeId) => {
     if (!window.confirm('Delete this challenge and all its attempts?')) return;
-    
+
     try {
       const batch = writeBatch(db);
-      
+
       const attemptsQuery = query(collection(db, 'quizAttempts'), where('challengeId', '==', challengeId));
       const attemptsSnapshot = await getDocs(attemptsQuery);
       attemptsSnapshot.forEach(doc => batch.delete(doc.ref));
-      
+
       batch.delete(doc(db, 'challenges', challengeId));
       await batch.commit();
-      
+
       setChallenges(prev => prev.filter(c => c.id !== challengeId));
       setAttempts(prev => {
         const newAttempts = { ...prev };
@@ -89,17 +90,17 @@ const ChallengeHistory = () => {
 
   const deleteAllChallenges = async () => {
     if (!window.confirm('Delete ALL challenges and attempts? This cannot be undone.')) return;
-    
+
     try {
       const batch = writeBatch(db);
-      
+
       for (const challenge of challenges) {
         const attemptsQuery = query(collection(db, 'quizAttempts'), where('challengeId', '==', challenge.id));
         const attemptsSnapshot = await getDocs(attemptsQuery);
         attemptsSnapshot.forEach(doc => batch.delete(doc.ref));
         batch.delete(doc(db, 'challenges', challenge.id));
       }
-      
+
       await batch.commit();
       setChallenges([]);
       setAttempts({});
@@ -108,38 +109,44 @@ const ChallengeHistory = () => {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center' }}>Loading challenges...</div>;
+  if (loading) return <div className="loading-message">Loading challenges...</div>;
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <h2 style={{ textAlign: 'center' }}>Challenge History</h2>
-      
+    <div className="challenge-container">
+      <h2 className="challenge-heading">Challenge History</h2>
+
       {challenges.length === 0 ? (
-        <div style={{ textAlign: 'center' }}>
+        <div className="empty-message">
           <p>No challenges found</p>
-          <button onClick={() => navigate('/myquizes')}>Create Challenge</button>
+          <button className="glass-button" onClick={() => navigate('/myquizes')}>Create Challenge</button>
         </div>
       ) : (
         <div>
-          <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-            <button onClick={deleteAllChallenges}>Delete All History</button>
+          <div className="centered-button">
+            <button className="glass-button" onClick={deleteAllChallenges}>Delete All History</button>
           </div>
-          
+
           {challenges.map(challenge => (
-            <div key={challenge.id} style={{ marginBottom: '20px', border: '1px solid #ddd', padding: '15px' }}>
-              <div onClick={() => toggleChallenge(challenge.id)} style={{ cursor: 'pointer' }}>
+            <div key={challenge.id} className="challenge-box">
+              <div className="challenge-header" onClick={() => toggleChallenge(challenge.id)}>
                 <h3>{challenge.quizTitle || 'Untitled Quiz'}</h3>
                 <p>Created: {challenge.createdAt?.toLocaleString() || 'N/A'}</p>
-                <button onClick={(e) => { e.stopPropagation(); deleteChallenge(challenge.id); }}>
+                <button
+                  className="glass-button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteChallenge(challenge.id);
+                  }}
+                >
                   Delete
                 </button>
               </div>
 
               {expandedChallenge === challenge.id && (
-                <div style={{ marginTop: '15px' }}>
+                <div className="attempts-section">
                   <h4>Attempts</h4>
                   {attempts[challenge.id]?.length > 0 ? (
-                    <table style={{ width: '100%', marginTop: '10px' }}>
+                    <table className="attempts-table">
                       <thead>
                         <tr>
                           <th>Player</th>

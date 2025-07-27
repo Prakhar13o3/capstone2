@@ -7,14 +7,12 @@ const Header = () => {
   const [user, setUser] = useState(null);
   const navigate = useNavigate();
 
-
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
     });
     return () => unsubscribe();
   }, []);
-
 
   const handleLogout = async () => {
     await signOut(auth);
@@ -31,7 +29,7 @@ const Header = () => {
 
           {user ? (
             <>
-              <span className="nav-user">Welcome, {user.email}</span>
+              <span className="nav-link nav-user">Welcome, {user.email}</span>
               <Link className="nav-link" onClick={handleLogout}>Logout</Link>
             </>
           ) : (

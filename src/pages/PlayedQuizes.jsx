@@ -54,14 +54,14 @@ const PlayedQuizzes = () => {
 
   const deleteAllAttempts = async () => {
     if (!window.confirm('Delete ALL quiz attempts? This cannot be undone.')) return;
-    
+
     try {
       const batch = writeBatch(db);
-      
+
       for (const attempt of attempts) {
         batch.delete(doc(db, 'quizAttempts', attempt.id));
       }
-      
+
       await batch.commit();
       setAttempts([]);
     } catch (error) {
@@ -69,32 +69,28 @@ const PlayedQuizzes = () => {
     }
   };
 
-  if (loading) return <div style={{ textAlign: 'center' }}>Loading your quiz attempts...</div>;
+  if (loading) return <div className="center-text">Loading your quiz attempts...</div>;
 
   if (!attempts.length) return (
-    <div style={{ textAlign: 'center' }}>
+    <div className="center-text">
       <p>No quizzes played yet!</p>
     </div>
   );
 
   return (
-    <div style={{ maxWidth: '800px', margin: '0 auto', padding: '20px' }}>
-      <h2 style={{ textAlign: 'center' }}>My Played Quizzes</h2>
-      
-      <div style={{ textAlign: 'center', marginBottom: '20px' }}>
-        <button onClick={deleteAllAttempts}>Delete All History</button>
+    <div className="played-quizzes-container">
+      <h2 className="played-quizzes-title">My Played Quizzes</h2>
+
+      <div className="delete-all-container">
+        <button className="glass-button" onClick={deleteAllAttempts}>Delete All History</button>
       </div>
-      
+
       {attempts.map((attempt) => (
-        <div key={attempt.id} style={{ 
-          border: '1px solid #ddd', 
-          padding: '15px', 
-          marginBottom: '15px'
-        }}>
+        <div key={attempt.id} className="attempt-card">
           <h3>{attempt.quizTitle || 'Untitled Quiz'}</h3>
           <p>Score: {attempt.score}/{attempt.totalQuestions}</p>
           <p>Played At: {attempt.playedAt?.toLocaleString()}</p>
-          <button onClick={() => handleDelete(attempt.id)}>Delete</button>
+          <button className="glass-button" onClick={() => handleDelete(attempt.id)}>Delete</button>
         </div>
       ))}
     </div>
