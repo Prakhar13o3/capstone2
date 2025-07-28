@@ -37,7 +37,10 @@ const CreateQuiz = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const user = auth.currentUser;
-    if (!user) return;
+    if (!user){
+      alert("You must be logged in to create a quiz.");
+      navigate('/login');
+    return;}
 
     try {
       await addDoc(collection(db, 'quizzes'), {
